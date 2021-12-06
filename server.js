@@ -95,6 +95,7 @@ app.post("/studentRegister",(req,res)=>{
                     email : req.body.rollno+"@cmrcet.ac.in",
                     password : req.body.password,
                     department:req.body.department,
+                    gender:req.body.gender,
                     year:req.body.year,
                     event_passess:0,
                     gate_passesss:0,

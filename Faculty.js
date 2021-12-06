@@ -70,6 +70,8 @@ router.post("/Login",(req,res)=>{
     })
 });
 
+
+
 router.post("/Register",(req,res)=>{
     Faculty.findOne({email:req.body.email},(err,result)=>{
         if(err){
@@ -142,14 +144,44 @@ router.post("/accept/gatepass",(req,res)=>{
             res.status(200).json({error:true});
         }
         else{
-            if(result){
-                result.Faculty.name = faculty_name;
-                result.Faculty.email = faculty_email;
-                result.Faculty.permitted=true;
-                result.status = "accepted";
-                result.save();
-                console.log(result);
-                res.status(200).json(result);
+            if(result){ 
+                Student.findOne({rollno:req.body.rollno},(err,student)=>{
+                    if(err){
+                        res.status(200).json({error:true});
+                    }
+                    else{
+                        if(student){
+                            Faculty.findOne({email:req.body.faculty_email},(err,faculty)=>{
+                                if(err){
+                                    res.status(200).json({updated:false});
+                                }
+                                else{
+                                    if(faculty){
+                                        faculty.gate_passesss+=1;
+
+                                        result.Faculty.name = faculty_name;
+                                        result.Faculty.email = faculty_email;
+                                        result.Faculty.permitted=true;
+                                        result.status = "accepted";
+                                        
+                                        student.gate_passesss = student.gate_passesss+1;
+
+                                        faculty.save();
+                                        result.save();
+                                        student.save();
+                                        res.status(200).json(result)
+                                    }
+                                    else{
+                                        res.status(200).json({found:false});
+                                    }
+                                }
+                            });
+                        }
+                        else{
+                            res.status(200).json({found:false});
+                        }
+                    }
+                });
             }
             else{
                 res.status(200).json({found:false});
