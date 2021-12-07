@@ -129,7 +129,7 @@ router.post("/get/gatepass",(req,res)=>{
     console.log(filter);
     Gate.find(filter,(err,result)=>{
         if(err){
-            res.status(400).json({err:true});
+            res.status(400).json({error:true});
         }
         else
         {
