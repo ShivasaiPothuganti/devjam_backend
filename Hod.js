@@ -8,12 +8,11 @@ const router = express.Router();
 var hod_department;
 var hod_year;
 
-router.get("/gatepass",(req,res)=>{
-    var filter = {
-
-    }
-    if(hod_year>1){
+router.post("/gatepass",(req,res)=>{
+    var filter = {}
+    if(req.body.hod_year>1){
         filter = {
+            accepted_by_hod:null,
             marked_for_review:true,
             year:{$gte:2},
             department:hod_department
@@ -21,6 +20,7 @@ router.get("/gatepass",(req,res)=>{
     }
     else{
         filter = {
+            accepted_by_hod:null,
             marked_for_review:true,
             year:1,
             department:hod_department
@@ -37,24 +37,166 @@ router.get("/gatepass",(req,res)=>{
     });
 });
 
-router.post("/gatepass",(req,res)=>{
-    Gate.findOneAndUpdate(
-        {_id:req.body.id},
-        {
-            status:req.body.status,
-            accepted_by_hod:req.body.permitted
-        },(err)=>{
+router.post("/eventpass",(req,res)=>{
+    var filter = {};
+    if(req.body.hod_year>1){
+        filter = {
+            accepted_by_hod:null,
+            marked_for_review:true,
+            year:{$gte:2},
+            department:hod_department
+        }
+    }
+    else{
+        filter = {
+            accepted_by_hod:null,
+            marked_for_review:true,
+            year:1,
+            department:hod_department
+        }  
+    }
+    Event.find(filter,(err,result)=>{
         if(err){
             res.status(200).json({error:true});
         }
         else{
-            res.status(200).json({updated:true});
+            res.status(200).json(result);
+        }
+    })
+});
+
+router.post("/getfaculty",(req,res)=>{
+    var filter ={};
+    if(req.body.hod_year===1){
+        filter = {
+            year:req.body.hod_year,
+        }
+    }
+    else{
+        filter = {
+            year:{$gte:2},
+            department:req.body.department
+        }
+    }
+    Faculty.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    });
+});
+
+router.post("/approve/faculty",(req,res)=>{
+    const id = req.body.id;
+    const permission = req.body.permitted;
+    Faculty.findOne({_id:id},(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(result){
+               result.hod_approved = permission;
+               result.save(); 
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+})
+
+router.post("/gatepass",(req,res)=>{
+    Hod.findOne(
+        {
+        email:req.body.hod_email,
+        department:req.body.department
+        },(err,hod)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(hod){
+                Student.findOne({rollno:req.body.rollno},(err,student)=>{
+                    if(err){
+                        res.status(200).json({error:true});
+                    }
+                    else{
+                        if(student){
+                            var filter = {};
+                if(req.body.year===1){
+                    filter = {
+                        _id:req.body.id,
+                        marked_for_review:true,
+                        year:1
+                    }
+                }
+                else{
+                    filter = {
+                        _id:req.body.id,
+                        marked_for_review:true,
+                        department:req.body.department,
+                        year:{$gte:2}
+                    }
+                }
+                var update = {
+
+                }
+                if(req.body.permitted===true){
+                    update = {
+                        accepted_by_hod:true,
+                        status:"accepted"
+                    }
+                }
+                else{
+                    update = {
+                        accepted_by_hod:false,
+                        status:"rejected"
+                    }
+                }
+                Gate.findOneAndUpdate(filter,update,(err)=>{
+                    if(err){
+                        res.status(200).json({error:true});
+                    }
+                    else{
+                        if(req.body.permitted){
+                            hod.gate_passesss+=1;
+                            student.gate_passesss+=1;
+                            student.save();
+                            hod.save();
+                        }
+                        res.status(200).json({updated:true});
+                    }
+                })
+                        }
+                        else{
+                            res.status(200).json({student_found:false});
+                        }
+                    }
+                })
+            }
+            else{
+                res.status(200).json({hod_found:false});
+            }
         }
     });
 });
 
 router.get("/",(req,res)=>{
-    Hod.findOne({department:req.body.student_department},(err,result)=>{
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            year:req.body.year,
+        }
+    }
+    else{
+        filter ={
+            year:{$gte:2},
+            department:req.body.student_department
+        }
+    }
+    Hod.findOne(filter,(err,result)=>{
         if(err){
             res.status(200).json({err:true});
         }
@@ -126,10 +268,6 @@ router.post("/remove",(req,res)=>{
     })
 });
 
-
-router.get("/eventpass",(reqq,res)=>{
-    
-})
 
 
 export default router;

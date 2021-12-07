@@ -33,15 +33,28 @@ router.get("/",(req,res)=>{
     })
 });
 
-router.get("/gatepass",(req,res)=>{
-    const filter = {
-        'Incharge.email':incharge.email,
-        'Incharge.permitted':null,
-        'Faculty.permitted':null,
-        marked_for_review:null,
-        status:'pending',
-        department:incharge.department,
-        year:incharge.year,
+router.post("/gatepass",(req,res)=>{
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            'Incharge.email':req.body.incharge_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:req.body.year,
+        }
+    }
+    else{  
+        filter = {
+            'Incharge.email':req.body.incharge_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            department:req.body.incharge_department,
+            year:req.body.year,
+        }
     }
     Gate.find(filter,(err,result)=>{
         if(err){
@@ -55,15 +68,29 @@ router.get("/gatepass",(req,res)=>{
 
 router.post("/accept/gatepass",(req,res)=>{
     const id = req.body.id;
-    const filter = {
-        _id:id,
-        'Incharge.email':incharge.email,
-        'Incharge.permitted':null,
-        'Faculty.permitted':null,
-        marked_for_review:null,
-        status:'pending',
-        department:incharge.department,
-        year:incharge.year,
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            _id:id,
+            'Incharge.email':req.body.incharge_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:req.body.year,
+        } 
+    }
+    else{
+        filter = {
+            _id:id,
+            'Incharge.email':req.body.incharge_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            department:req.body.incharge_department,
+            year:req.body.year,
+        }
     }
     Gate.findOne(filter,(err,result)=>{
         if(err){
@@ -72,12 +99,40 @@ router.post("/accept/gatepass",(req,res)=>{
         else
         {
             if(result){
-                result.Incharge.name=incharge.name;
-                result.Incharge.email=incharge.email;
-                result.Incharge.permitted=true;
-                result.status="accepted";
-                result.save();
-                res.status(200).json({updated:true});
+                Student.findOne({rollno:req.body.rollno},(err,student)=>{
+                    if(err){
+                        res.status(200).json({found:false});
+                    }
+                    else
+                    {
+                        if(student){    
+                            Faculty.findOne({email:req.body.email},(err,faculty)=>{
+                                if(err){
+                                    res.status(200).json({error:false});
+                                }
+                                else{
+                                    if(faculty){
+                                        result.Incharge.name=incharge.name;
+                                        result.Incharge.email=incharge.email;
+                                        result.Incharge.permitted=true;
+                                        result.status="accepted";
+
+                                        student.gate_passesss+=1;
+                                        faculty.gate_passesss+=1;
+                                        student.save();
+                                        faculty.save();
+                                        result.save();
+                                        res.status(200).json({updated:true});
+                                    }
+                                    else
+                                    {
+                                        res.status(200).json({found:false});
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });  
             }
             else
             {

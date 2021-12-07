@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import express from "express";
+import express, { application } from "express";
 import Student from "./model.js";
-import { Faculty,Incharge,Hod,Gate,Event } from "./model.js";
+import { Faculty,Incharge,Hod,Gate,Event,Leave } from "./model.js";
 
 const router  = express.Router();
 var faculty_name;
@@ -26,11 +26,13 @@ router.post("/",(req,res)=>{
     var filter = {};
     if(year===1){
         filter = {
-            year:year
+            year:year,
+            hod_approved:true,
         }
     }
     else{
         filter = {
+            hod_approved:true,
             department:department,
             year:year
         }  
@@ -88,6 +90,7 @@ router.post("/Register",(req,res)=>{
                     password:req.body.password,
                     department:req.body.department,
                     year:req.body.year,
+                    hod_approved:false,
                     event_passess:0,
                     gate_passesss:0,
                     council_passess:0,
@@ -111,7 +114,7 @@ router.post("/remove",(req,res)=>{
         else{
             res.status(200).json({removed:true});
         }
-    })
+    });
 });
 
 router.post("/get/gatepass",(req,res)=>{
@@ -139,7 +142,33 @@ router.post("/get/gatepass",(req,res)=>{
 
 router.post("/accept/gatepass",(req,res)=>{
     console.log("request");
-    Gate.findOne({_id:req.body.id,marked_for_review:null},(err,result)=>{
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            _id:req.body.id, 
+            marked_for_review:null,
+            'Faculty.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:1
+        }
+    }
+    else{
+        filter = {
+            _id:req.body.id,
+            marked_for_review:null,
+            'Faculty.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            department:req.body.faculty_department,
+            year:{$gte:2}
+        }
+    }
+    Gate.findOne(filter,(err,result)=>{
         if(err){
             res.status(200).json({error:true});
         }
@@ -159,8 +188,8 @@ router.post("/accept/gatepass",(req,res)=>{
                                     if(faculty){
                                         faculty.gate_passesss+=1;
 
-                                        result.Faculty.name = faculty_name;
-                                        result.Faculty.email = faculty_email;
+                                        result.Faculty.name = req.body.faculty_name;
+                                        result.Faculty.email = req.body.faculty_email;
                                         result.Faculty.permitted=true;
                                         result.status = "accepted";
                                         
@@ -172,19 +201,19 @@ router.post("/accept/gatepass",(req,res)=>{
                                         res.status(200).json(result)
                                     }
                                     else{
-                                        res.status(200).json({found:false});
+                                        res.status(200).json({found_1:false});
                                     }
                                 }
                             });
                         }
                         else{
-                            res.status(200).json({found:false});
+                            res.status(200).json({found_2:false});
                         }
                     }
                 });
             }
             else{
-                res.status(200).json({found:false});
+                res.status(200).json({found_3:false});
             }
         }
     });
@@ -199,6 +228,8 @@ router.post("/reject/gatepass",(req,res)=>{
             if(result){
                 result.Faculty.permitted=false;
                 result.Faculty.status = "rejected";
+                result.Faculty.email = req.body.faculty_email;
+                result.Faculty.name = req.body.faculty_name;
                 result.save();
                 res.status(200).json(result);
             }
@@ -209,9 +240,7 @@ router.post("/reject/gatepass",(req,res)=>{
     });
 });
 
-router.post("/history/pass",(req,res)=>{
-    var error = false;
-    var final_result = [];
+router.post("/history/gatepass",(req,res)=>{
     const filter = {
         'Faculty.email':req.body.faculty_email,
         $or:[
@@ -221,31 +250,50 @@ router.post("/history/pass",(req,res)=>{
     }
     Gate.find(filter,(err,result)=>{
         if(err){
-            error = true;
+            res.status(200).json({error:true});
         }
         else
         { 
-            final_result.push(result);  
+            res.status(200).json(result);
         }
     });
-    Event.find(filter,(err,result)=>{
-        if(err){
-           error= true;
-        }
-        else
-        {
-            final_result.push(result);
-        }
-    });
-    if(error){
-        res.status(200).json({error:true});
-    }
-    else{
-        res.status(200).json(final_result);
-    }
-
 });
 
+router.post("/history/eventpass",(req,res)=>{
+    const filter = {
+        'Faculty.email':req.body.faculty_email,
+        $or:[
+            {status:'accepted'},
+            {status:'rejected'}
+        ]
+    }
+    Event.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
+
+router.post("/history/councilpass",(req,res)=>{
+    const filter = {
+        'Faculty.email':req.body.faculty_email,
+        $or:[
+            {status:'accepted'},
+            {status:'rejected'}
+        ]
+    }
+    Council.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
 
 
 router.post("/forward/hod",(req,res)=>{
