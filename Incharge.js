@@ -203,7 +203,52 @@ router.post("/Login",(req,res)=>{
     })
 });
 
-router.post("/forward/hod",(req,res)=>{
+router.post("/get/otherpass",(req,res)=>{
+    const year = req.body.year;
+    var filter={};
+    if(year===1){
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Faculty.permitted':null,
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            year:1,
+            status:"pending"
+        }
+    }
+    else{
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            year:{$gte:2},
+            department:req.body.department,
+            status:"pending"
+        }
+    }
+    Other.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
+
+router.get("/statistics",(req,res)=>{
+    Incharge.find({},(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
+
+router.post("/forward/hod/gate",(req,res)=>{
     const id = req.body.id;
     const filter = {
         _id:id,

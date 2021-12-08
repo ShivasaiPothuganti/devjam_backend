@@ -18,8 +18,8 @@ import incharge from "./Incharge.js";
 */
 
 /*Model imports*/
-import Student from "./model.js";
-import { Faculty,Hod,Incharge,Gate,Event } from "./model.js";
+import Student, { Other } from "./model.js";
+import { Faculty,Hod,Incharge,Gate,Event,Sick } from "./model.js";
 
 /*app config */
 const app = express();
@@ -137,11 +137,82 @@ app.post("/GatePass",(req,res)=>{
     res.status(200).json({added:true});
 });
 
+app.post("/eventPass",(req,res)=>{
+    const new_pass = Event({
+        student_rollno:req.body.rollno,
+        gen_date:new Date().toDateString(),
+        poster:req.body.poster,
+        event_name:req.body.event_name,
+        venue:req.body.venue,
+        Faculty:{
+            name:req.body.faculty_name,
+            email:req.body.faculty_email,
+            permitted:null,
+        },
+        Incharge:{
+            name:req.body.incharge_name,
+            email:req.body.incharge_email,
+            permitted:null
+        },
+        accepted_by_hod:null,
+        marked_for_review:null,
+        start_date:req.body.start_date,
+        end_date:req.body.end_date,
+    });
+    console.log(new_pass);
+    new_pass.save();
+});
 
+
+app.post("/sickpass",(req,res)=>{
+    const sick_pass = new Sick({
+        student_rollno:req.body.student_rollno,
+        gender:req.body.gender,
+        reason:req.body.reason,
+        gen_date:new Date().toDateString(),
+        Faculty:{
+            name:req.body.faculty_name,
+            email:req.body.faculty_email,
+            permitted:null 
+        },
+        year:req.body.year,
+        department:req.body.department,
+        status:"pending"
+    });
+    sick_pass.save();
+    res.status(200).json({saved:true});
+});
+
+app.post("/otherpass",(req,res)=>{
+    const otherpass = new Other({
+        student_rollno:req.body.rollno,
+        title:req.body.title,
+        reason:req.body.reason,
+        gen_date:new Date().toDateString(),
+        Faculty:{
+            name:req.body.faculty_name,
+            email:req.body.faculty_email,
+            permitted:null
+        },
+        Incharge:{
+            name:req.body.incharge_name,
+            email:req.body.incharge_email,
+            permitted:null
+        },
+        accepted_by_hod:null,
+        year:req.body.year,
+        marked_for_review:null,
+        department:req.body.department,
+        status:"pending",
+    });
+    otherpass.save();
+    res.status(200).json({saved:true});
+})
 
 app.get("/",(req,res)=>{
     res.send("<h1>I am up and running</h1>");
 });
+
 
 app.listen(port,(err)=>{
     if(err){

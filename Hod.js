@@ -265,9 +265,19 @@ router.post("/remove",(req,res)=>{
         else{
             res.status(200).json({removed:true});
         }
-    })
+    });
 });
 
+router.get("/statistics",(req,res)=>{
+    Hod.find({},(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
 
 
 export default router;

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import express, { application } from "express";
-import Student from "./model.js";
+import Student, { Sick } from "./model.js";
 import { Faculty,Incharge,Hod,Gate,Event,Leave } from "./model.js";
 
 const router  = express.Router();
@@ -20,7 +20,7 @@ var faculty_year;
 */
 
 
-router.post("/",(req,res)=>{
+router.post("/getfaculty",(req,res)=>{
     const year = req.body.year;
     const department = req.body.department;
     var filter = {};
@@ -46,6 +46,134 @@ router.post("/",(req,res)=>{
             res.status(200).json(result);
         }
     });
+});
+
+router.post("/getfaculty/sickpass",(req,res)=>{
+    var filter = {};
+
+    if(req.body.year===1){
+        filter = {
+            gender:req.body.student_gender,
+            hod_approved:true,
+            year:1
+        } 
+    }
+    else
+    {
+        filter = {
+            gender:req.body.student_gender,
+            hod_approved:true,
+            department:req.body.department,
+            year:{$gte:2}    
+        }
+    }
+    Faculty.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    });
+})
+
+router.post("/get/sickpass",(req,res)=>{
+    const filter = {
+        'Faculty.email':req.body.email,
+        permitted:null,
+        status:"pending",
+        gen_date:new Date().toDateString,
+    }
+    Sick.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else
+        {
+            res.status(200).json(result);
+        }
+    })
+});
+
+
+router.post("/accept/sickpass",(req,res)=>{
+    const filter = {
+        _id:req.body.id,
+        
+    }
+    Faculty.findOne({email:req.body.email},(err,faculty)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            Sick.findOne(filter,(err,sickpass)=>{
+                if(err){
+                    res.status(200).json({error:true});
+                }
+                else
+                {
+                    sickpass.Faculty.permitted = true
+                    sickpass.status = "accepted"
+                    faculty.sick_passeds+=1;
+
+                    sickpass.save();
+                    faculty.save();
+                    res.status(200).json({updated:true});
+                }
+            })
+        }
+    })
+});
+
+router.post("/reject/sickpass",(req,res)=>{
+    const filter = {
+        _id:req.body.id
+    }
+    Sick.findOne(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            result.Faculty.permitted= false;
+            result.status = "rejected";
+            result.save();
+            res.status(200).json({updated:true});
+        }
+    })
+});
+
+router.post("/get/otherpass",(req,res)=>{
+    const year = req.body.year;
+    var filter={};
+    if(year===1){
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Faculty.email':req.body.faculty_email,
+            'Faculty.permitted':null,
+            'Incharge.permitted':null,
+            year:1,
+            status:"pending"
+        }
+    }
+    else{
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Faculty.email':req.body.faculty_email,
+            'Faculty.permitted':null,
+            'Incharge.permitted':null,
+            year:{$gte:2},
+            department:req.body.department,
+            status:"pending"
+        }
+    }
+    Other.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
 });
 
 router.post("/Login",(req,res)=>{
@@ -91,6 +219,7 @@ router.post("/Register",(req,res)=>{
                     department:req.body.department,
                     year:req.body.year,
                     hod_approved:false,
+                    gender:req.body.gender,
                     event_passess:0,
                     gate_passesss:0,
                     council_passess:0,
@@ -139,6 +268,27 @@ router.post("/get/gatepass",(req,res)=>{
     });
 });
 
+
+router.post("/get/eventPass",(req,res)=>{
+    const filter = {
+        end_date : new Date().toDateString(),
+        'Faculty.email':req.body.faculty_email,
+        'Faculty.permitted':null,
+        'Incharge.permitted':null,
+        status:"pending",
+        marked_for_review:null,
+        status:"pending"
+    }
+    Event.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else
+        {
+            res.status(200).json(result);
+        }
+    })
+})
 
 router.post("/accept/gatepass",(req,res)=>{
     console.log("request");
@@ -277,7 +427,7 @@ router.post("/history/eventpass",(req,res)=>{
     })
 })
 
-router.post("/history/councilpass",(req,res)=>{
+router.post("/history/leavepass",(req,res)=>{
     const filter = {
         'Faculty.email':req.body.faculty_email,
         $or:[
@@ -285,7 +435,7 @@ router.post("/history/councilpass",(req,res)=>{
             {status:'rejected'}
         ]
     }
-    Council.find(filter,(err,result)=>{
+    Leave.find(filter,(err,result)=>{
         if(err){
             res.status(200).json({error:true});
         }
@@ -296,8 +446,18 @@ router.post("/history/councilpass",(req,res)=>{
 })
 
 
-router.post("/forward/hod",(req,res)=>{
-    Gate.findOne({_id:req.body.id,marked_for_review:null},(err,result)=>{
+router.post("/forward/hod/gate",(req,res)=>{
+    const filter = {
+        _id:id,
+        'Faculty.email':req.body.faculty,
+        'Incharge.permitted':null,
+        'Faculty.permitted':null,
+        marked_for_review:null,
+        status:'pending',
+        department:req.body.department,
+        year:req.body.year,
+    }
+    Gate.findOne(filter,(err,result)=>{
         if(err){
             res.status(200).json({err:true});
         }
@@ -313,5 +473,19 @@ router.post("/forward/hod",(req,res)=>{
         }
     })
 });
+
+
+
+router.get("/statistics",(req,res)=>{
+    Faculty.find({},(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    });
+});
+
 
 export default router;

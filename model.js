@@ -23,7 +23,8 @@ const faculty = mongoose.Schema({
     event_passess:Number,
     hod_approved:Boolean,
     gate_passesss:Number,
-    council_passess:Number,
+    gender:String,
+    leave_passess:Number,
     sick_passeds:Number
 });
 
@@ -74,11 +75,10 @@ const gate_passess = mongoose.Schema({
 
 const Event_pass = mongoose.Schema({
     student_rollno:String,
-    reason:String,
     gen_date:String,
     poster:String,
     event_name:String,
-    place:String,
+    venue:String,
     Faculty:{
         name:String,
         email:String,
@@ -93,9 +93,23 @@ const Event_pass = mongoose.Schema({
     marked_for_review:Boolean,
     start_date : String,
     end_date:String,
-    letter:String,
+    status:String
 });
 
+const sick_pass = mongoose.Schema({
+    student_rollno:String,
+    gender:String,
+    reason:String,
+    gen_date:String,
+    Faculty:{
+        name:String,
+        email:String,
+        permitted:Boolean 
+    },
+    year:Number,
+    department:String,
+    status:String
+})
 
 const Student = new mongoose.model('student',student);
 const Faculty = new mongoose.model('faculty',faculty);
@@ -126,6 +140,7 @@ const Leave = new mongoose.model('leave',new mongoose.Schema({
 const Other = new mongoose.model('other',new mongoose.Schema({
     student_rollno:String,
     reason:String,
+    title:String,
     gen_date:String,
     Faculty:{
         name:String,
@@ -142,7 +157,9 @@ const Other = new mongoose.model('other',new mongoose.Schema({
     marked_for_review:Boolean,
     department:String,
     status:String,
-}))
+}));
+
+const Sick = new mongoose.model('sick',sick_pass);
 
 export default Student;
-export {Faculty,Incharge,Hod,Gate,Event,Leave,Other};
+export {Faculty,Incharge,Hod,Gate,Event,Leave,Other,Sick};
