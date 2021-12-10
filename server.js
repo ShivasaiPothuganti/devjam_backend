@@ -241,8 +241,173 @@ app.post("/leave",(req,res)=>{
     res.status(200).json({added:true});
 });
 
+app.post("/get/gatepass",(req,ree)=>{
+    Gate.find({student_rollno:req.body.roll,gen_date:new Date().toDateString()},(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
 
+app.post("/get/eventpass",(req,res)=>{
+    Event.find(
+        {student_rollno:req.body.rollno,
+        end_date:{$gte:new Date().toDateString()}}
+    ,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+           res.status(200).json(result);  
+        }
+    })
+});
 
+app.post("/get/leavepass",(req,res)=>{
+    Leave.find({student_rollno:req.body.rollno,end_date:{$gte:new Date().toDateString()}},(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
+
+app.post("/get/sickpass",(req,res)=>{
+    Sick.find({student_rollno:req.body.rollno,gen_date:new Date().toDateString()},(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else
+        {
+            res.status(200).json(result);
+        }
+    })
+});
+
+app.post("/get/otherpass",(req,res)=>{
+    Other.find({student_rollno:req.body.rollno},(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
+
+app.post("/history/gatepass",(req,res)=>{
+    const filter = {
+        student_rollno:req.body.rollno,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false},
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false},
+            {accepted_by_hod:true},
+            {accepted_by_hod:false}
+        ],
+    }
+    Gate.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+    
+});
+
+app.post("/history/eventpass",(req,res)=>{
+    const filter = {
+        student_rollno:req.body.rollno,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false},
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false},
+            {accepted_by_hod:true},
+            {accepted_by_hod:false}
+        ],
+    }
+    Event.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    }) 
+});
+
+app.post("/history/leavepass",(req,res)=>{
+    const filter = {
+        student_rollno:req.body.rollno,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false},
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false},
+            {accepted_by_hod:true},
+            {accepted_by_hod:false}
+        ],
+    }
+    Leave.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
+app.post("/history/otherpass",(req,res)=>{
+    const filter = {
+        student_rollno:req.body.rollno,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false},
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false},
+            {accepted_by_hod:true},
+            {accepted_by_hod:false}
+        ],
+    }
+    Other.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
+app.post("/history/sickpass",(req,res)=>{
+    const filter = {
+        student_rollno:req.body.rollno,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false},
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false},
+            {accepted_by_hod:true},
+            {accepted_by_hod:false}
+        ],
+    }
+    Sick.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
 
 
 app.get("/",(req,res)=>{
