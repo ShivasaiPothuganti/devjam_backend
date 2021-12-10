@@ -243,6 +243,8 @@ app.post("/leave",(req,res)=>{
 
 
 
+
+
 app.get("/",(req,res)=>{
     res.send("<h1>I am up and running</h1>");
 });
@@ -257,3 +259,5 @@ app.listen(port,(err)=>{
         console.log("server is up and running on port "+port);
     }
 });
+
+/*gatepass */

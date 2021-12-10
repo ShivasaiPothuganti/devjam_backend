@@ -21,6 +21,61 @@ var incharge ={
 
 
 const router  = express.Router();
+router.post("/Login",(req,res)=>{
+    Incharge.findOne({email:req.body.email},(err,result)=>{
+        if(err){
+            res.status(400).json({err:true});
+        }
+        else{
+            if(result){
+                if(result.password===req.body.password){
+                    incharge = {
+                        name:result.name,
+                        department:result.department,
+                        year:result.year,
+                        email:result.email
+                    }
+                    res.status(200).json({login:true});
+                }
+                else{
+                    res.status(200).json({login:false});
+                }
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+});
+
+router.post("/Register",(req,res)=>{
+    Incharge.findOne({email:req.body.email,department:req.body.department},(err,result)=>{
+        if(err){
+            res.status(400).json({err:true});
+        }
+        else{
+            if(result){
+                res.status(200).json({found:true});
+            }
+            else{
+                const new_incharge = new Incharge({
+                    name:req.body.name,
+                    email:req.body.email,
+                    password:req.body.password,
+                    department:req.body.department,
+                    event_passess:0,
+                    year:req.body.year,
+                    gate_passesss:0,
+                    leave_passess:0,
+                    sick_passeds:0,
+                    other_passess:0,
+                });
+                new_incharge.save();
+                res.status(200).json({register:true});
+            }
+        }
+    })
+});
 
 router.get("/",(req,res)=>{
     Incharge.find({department:student_department},(err,result)=>{
@@ -32,7 +87,7 @@ router.get("/",(req,res)=>{
         }
     })
 });
-
+/*gatepass */
 router.post("/gatepass",(req,res)=>{
     var filter = {};
     if(req.body.year===1){
@@ -176,78 +231,6 @@ router.post("/reject/gatepass",(req,res)=>{
     })
 })
 
-router.post("/Login",(req,res)=>{
-    Incharge.findOne({email:req.body.email},(err,result)=>{
-        if(err){
-            res.status(400).json({err:true});
-        }
-        else{
-            if(result){
-                if(result.password===req.body.password){
-                    incharge = {
-                        name:result.name,
-                        department:result.department,
-                        year:result.year,
-                        email:result.email
-                    }
-                    res.status(200).json({login:true});
-                }
-                else{
-                    res.status(200).json({login:false});
-                }
-            }
-            else{
-                res.status(200).json({found:false});
-            }
-        }
-    })
-});
-
-router.post("/get/otherpass",(req,res)=>{
-    const year = req.body.year;
-    var filter={};
-    if(year===1){
-        filter = {
-            gen_date:new Date().toDateString(),
-            'Faculty.permitted':null,
-            'Incharge.email':req.body.faculty_email,
-            'Incharge.permitted':null,
-            year:1,
-            status:"pending"
-        }
-    }
-    else{
-        filter = {
-            gen_date:new Date().toDateString(),
-            'Incharge.email':req.body.faculty_email,
-            'Incharge.permitted':null,
-            'Faculty.permitted':null,
-            year:{$gte:2},
-            department:req.body.department,
-            status:"pending"
-        }
-    }
-    Other.find(filter,(err,result)=>{
-        if(err){
-            res.status(200).json({error:true});
-        }
-        else{
-            res.status(200).json(result);
-        }
-    })
-});
-
-router.get("/statistics",(req,res)=>{
-    Incharge.find({},(err,result)=>{
-        if(err){
-            res.status(200).json({error:true});
-        }
-        else{
-            res.status(200).json(result);
-        }
-    })
-})
-
 router.post("/forward/hod/gate",(req,res)=>{
     const id = req.body.id;
     const year = req.body.year;
@@ -293,31 +276,60 @@ router.post("/forward/hod/gate",(req,res)=>{
     })
 });
 
-router.post("/Register",(req,res)=>{
-    Incharge.findOne({email:req.body.email,department:req.body.department},(err,result)=>{
+router.post("/history/gatepass",(req,res)=>{
+    const filter = {
+        'Incharge.email': req.body.name,
+        $or:[
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false}, 
+        ],
+        $or:[
+            {status:"accepted"},
+            {status:"rejected"}
+        ]
+    }
+    Gate.find(filter,(err,result)=>{
         if(err){
-            res.status(400).json({err:true});
+            res.status(200).json({error:true});
         }
         else{
-            if(result){
-                res.status(200).json({found:true});
-            }
-            else{
-                const new_incharge = new Incharge({
-                    name:req.body.name,
-                    email:req.body.email,
-                    password:req.body.password,
-                    department:req.body.department,
-                    event_passess:0,
-                    year:req.body.year,
-                    gate_passesss:0,
-                    leave_passess:0,
-                    sick_passeds:0,
-                    other_passess:0,
-                });
-                new_incharge.save();
-                res.status(200).json({register:true});
-            }
+            res.status(200).json(result);
+        }
+    });
+});
+
+/*otherpass */
+
+router.post("/get/otherpass",(req,res)=>{
+    const year = req.body.year;
+    var filter={};
+    if(year===1){
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Faculty.permitted':null,
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            year:1,
+            status:"pending"
+        }
+    }
+    else{
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            year:req.body.year,
+            department:req.body.department,
+            status:"pending"
+        }
+    }
+    Other.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
         }
     })
 });
@@ -419,7 +431,7 @@ router.post("/forward/hod/otherpass",(re,res)=>{
             'Faculty.permitted':null,
             marked_for_review:null,
             status:'pending',
-            year:{$gte:2},
+            year:req.body.year,
         }
     }
     Other.findOne(filter,(err,result)=>{
@@ -463,28 +475,41 @@ router.post("/history/otherpass",(req,res)=>{
     })
 });
 
-router.post("/history/gatepass",(req,res)=>{
-    const filter = {
-        'Incharge.email': req.body.name,
-        $or:[
-            {'Incharge.permitted':true},
-            {'Incharge.permitted':false}, 
-        ],
-        $or:[
-            {status:"accepted"},
-            {status:"rejected"}
-        ]
+/*leave pass */
+
+
+router.post("/get/leave",(req,res)=>{
+    var filter={};
+    if(year===1){
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Faculty.permitted':null,
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            year:1,
+            status:"pending"
+        }
     }
-    Gate.find(filter,(err,result)=>{
+    else{
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            year:req.body.year,
+            department:req.body.department,
+            status:"pending"
+        }
+    }
+    Leave.find(filter,(err,result)=>{
         if(err){
             res.status(200).json({error:true});
         }
         else{
             res.status(200).json(result);
         }
-    });
-});
-
+    })
+})
 router.post("/approve/leavepass",(req,res)=>{
     const id = req.body.id;
     const permitted = req.body.permission;
@@ -502,7 +527,7 @@ router.post("/approve/leavepass",(req,res)=>{
                         if(student){
                             Leave({_id:id},(err,result)=>{
                                 if(err){
-                                    res.status(200).json({error:true});
+                                    res.status(400).json({error:true});
                                 }
                                 else{
                                     if(result){
@@ -587,6 +612,137 @@ router.post("/history/leave",(req,res)=>{
     });   
 })
 
+/*Event pass */
+router.post("/get/eventpass",(req,res)=>{
+    var filter={};
+    if(year===1){
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Faculty.permitted':null,
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            year:1,
+            status:"pending"
+        }
+    }
+    else{
+        filter = {
+            gen_date:new Date().toDateString(),
+            'Incharge.email':req.body.faculty_email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            year:req.body.year,
+            department:req.body.department,
+            status:"pending"
+        }
+    }
+    Event.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
+
+router.post("/approve/leave",(req,res)=>{
+    const id = req.body.id;
+    const permitted = req.body.permitted;
+    Incharge.findOne({email:req.body.email},(err,incharge)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            if(incharge){
+                Student.fidnOne({rollno:req.body.rollno},(err,student)=>{
+                    if(err){
+                        res.status(400).json({error:true});
+                    }
+                    else{
+                        if(student){
+                            Event.findOne({_id:id},(err,result)=>{
+                                if(err){
+                                    res.status(400).json({error:true});
+                                }
+                                else{
+                                    if(result){
+                                        if(permitted){
+                                            result.Incharge.permitted = true;
+                                            result.status = "accepted";
+
+                                            student.event_passess+=1;
+
+                                            incharge.event_passess+=1;
+
+                                            result.save();
+                                            student.save();
+                                            incharge.save();
+                                            res.status(200).json({permitted:true});
+                                        }
+                                        else{
+                                            result.Incharge.permitted = false;
+                                            result.status = "rejected";
+                                            result.save();
+                                            res.status(200).json({permitted:false});
+                                        }
+                                    }
+                                    else{
+                                        res.status(200).json({passfound:false});
+                                    }
+                                }
+                            })
+                        }
+                        else{
+                            res.status(200).json({student_found:false});
+                        }
+                    }
+                })
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+});
+
+router.post("/forward/hod",(req,res)=>{
+    const id = req.body.id;
+    Event.findOne({_id:id},(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            result.marked_for_review = true;
+            result.sent_by = result.Incharge.name,
+            result.save();
+            res.status(200).json({marked:true})
+        }   
+    })
+});
+
+router.post("/history/eventpass",(req,res)=>{
+    const filter = {
+        'Incharge.email':req.body.incharge_email,
+        $or:[
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false},
+        ],
+        $or:[
+            {status:'accepted'},
+            {status:'rejected'}
+        ]
+    }
+    Event.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
+
 router.post("/remove",(req,res)=>{
     Incharge.deleteOne({email:req.body.email},(err)=>{
         if(err){
@@ -597,5 +753,16 @@ router.post("/remove",(req,res)=>{
         }
     })
 });
+
+router.get("/statistics",(req,res)=>{
+    Incharge.find({},(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
 
 export default router;
