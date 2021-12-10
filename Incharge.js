@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import express from "express";
-import Student from "./model.js";
+import Student, { Other } from "./model.js";
 import {Faculty,Incharge,Hod,Gate,Event} from "./model.js";
 
 /*
@@ -250,15 +250,30 @@ router.get("/statistics",(req,res)=>{
 
 router.post("/forward/hod/gate",(req,res)=>{
     const id = req.body.id;
-    const filter = {
-        _id:id,
-        'Incharge.email':incharge.email,
-        'Incharge.permitted':null,
-        'Faculty.permitted':null,
-        marked_for_review:null,
-        status:'pending',
-        department:incharge.department,
-        year:incharge.year,
+    const year = req.body.year;
+    var filter = {};
+    if(year===1){
+        filter = {
+            _id:id,
+            'Incharge.email':req.body.email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:1,
+        }
+    }
+    else{
+        filter = {
+            _id:id,
+            'Incharge.email':req.body.email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            department:req.body.department,
+            year:{$gte:2},
+        }
     }
     Gate.findOne(filter,(err,result)=>{
         if(err){
@@ -267,6 +282,7 @@ router.post("/forward/hod/gate",(req,res)=>{
         else{
             if(result){
                 result.marked_for_review = true;
+                result.sent_by = result.Incharge.name;
                 result.save();
                 res.status(200).json({forward:true});
             }
@@ -275,7 +291,7 @@ router.post("/forward/hod/gate",(req,res)=>{
             }
         }
     })
-})
+});
 
 router.post("/Register",(req,res)=>{
     Incharge.findOne({email:req.body.email,department:req.body.department},(err,result)=>{
@@ -295,20 +311,178 @@ router.post("/Register",(req,res)=>{
                     event_passess:0,
                     year:req.body.year,
                     gate_passesss:0,
-                    council_passess:0,
-                    sick_passeds:0
+                    leave_passess:0,
+                    sick_passeds:0,
+                    other_passess:0,
                 });
-                incharge = {
-                    name:req.body.name,
-                    department:req.body.department,
-                    year:req.body.year,
-                    email:req.body.email
-                }
                 new_incharge.save();
                 res.status(200).json({register:true});
             }
         }
     })
+});
+
+router.post("/accept/otherpass",(req,res)=>{
+    const id = req.body.id;
+    Incharge.findOne({email:req.body.email},(err,incharge)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(incharge){
+                Student.findOne({student_rollno:req.body.student_rollno},(err,student)=>{
+                    if(err){
+                        res.status(200).json({error:true});
+                    }
+                    else{
+                        if(student){
+                            Other.findOne({_id:id},(err,result)=>{
+                                if(err){
+                                    res.status(200).json({error:true});
+                                }
+                                else{
+                                    if(result){
+                                        result.Incharge.permitted = true;
+                                        result.Faculty.status = "accepted";
+
+                                        student.other_passess+=1;
+
+                                        incharge.other_passess+=1;
+
+                                        result.save();
+                                        student.save();
+                                        faculty.save();
+
+                                        res.status(200).json({updated:true});
+                                    }
+                                    else
+                                    {
+                                        res.status(200).json({found:false});
+                                    }
+                                }
+                            })
+                        }
+                        else{
+                            res.status(200).json({found:false});
+                        }
+                    }
+                })
+            }
+            else
+            {
+                res.status(200).json({incahrge_found:false});
+            }
+        }
+    })
+});
+
+router.post("/reject/otherpass",(req,res)=>{
+    const id = body.req.id;
+    Other.findOne({_id:id},(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else
+        {
+            if(result){
+                result.Incharge.permitted = false;
+                result.status = "rejected";
+                result.save();
+                rse.status(200).json({rejected:true});
+            }
+            else{
+                res.status(200).json({passfound:false});
+            }
+        }
+    })
+});
+
+router.post("/forward/hod/otherpass",(re,res)=>{
+    var filter = {};
+    const id = req.body.id;
+    if(req.body.year===1){
+        filter = {
+            _id:id,
+            'Incharge.email':req.body.email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:1, 
+        }
+    }
+    else{
+        filter = {
+            _id:id,
+            'Incharge.email':req.body.email,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:{$gte:2},
+        }
+    }
+    Other.findOne(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(result){
+                result.marked_for_review = true;
+                result.sent_by = result.Incharge.name;
+                result.save();
+                res.status(200).json({forwarded:true});
+            }
+            else{
+                res.status(200).json({pass_found:false});
+            }
+        }
+    })
+
+});
+
+router.post("/history/otherpass",(req,res)=>{
+    const filter = {
+        'Faculty.emai': req.body.name,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false}, 
+        ],
+        $or:[
+            {status:"accepted"},
+            {status:"rejected"}
+        ]
+    }
+    Other.findOne(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
+
+router.post("/history/gatepass",(req,res)=>{
+    const filter = {
+        'Faculty.emai': req.body.name,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false}, 
+        ],
+        $or:[
+            {status:"accepted"},
+            {status:"rejected"}
+        ]
+    }
+    Gate.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    });
 });
 
 router.post("/remove",(req,res)=>{

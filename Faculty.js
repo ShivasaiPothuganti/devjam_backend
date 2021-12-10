@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import express, { application } from "express";
-import Student, { Sick } from "./model.js";
+import Student, { Other, Sick } from "./model.js";
 import { Faculty,Incharge,Hod,Gate,Event,Leave } from "./model.js";
 
 const router  = express.Router();
@@ -8,8 +8,8 @@ var faculty_name;
 var faculty_email;
 var faculty_year;
 
-/*
-    {
+
+    const testing =  {
         "reason":"testing purpose",
         "facultyname":"ravi",
         "facultyeMail":"ravi@gmail.com",
@@ -17,7 +17,7 @@ var faculty_year;
         "inchargeEmail":"deepthi@gmail.com"
     }
 
-*/
+
 
 
 router.post("/getfaculty",(req,res)=>{
@@ -47,6 +47,8 @@ router.post("/getfaculty",(req,res)=>{
         }
     });
 });
+
+
 
 router.post("/getfaculty/sickpass",(req,res)=>{
     var filter = {};
@@ -95,6 +97,42 @@ router.post("/get/sickpass",(req,res)=>{
     })
 });
 
+router.post("/get/leave",(req,res)=>{
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            end_date:{$gte:req.body.date},
+            'Faculty.email':req.body.faculty_email,
+            'Faculty.permitted':null,
+            'Incharge.permitted':null,
+            marked_for_review:null,
+            accepted_by_hod:null,
+            status:"pending",
+            year:1
+        }
+    }
+    else{
+        filter = {
+            end_date:{$gte:req.body.date},
+            'Faculty.email':req.body.faculty_email,
+            'Faculty.permitted':null,
+            'Incharge.permitted':null,
+            marked_for_review:null,
+            accepted_by_hod:null,
+            status:"pending",
+            year:{$gte:2},
+            department:req.body.department
+        }
+    }
+    Leave.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
 
 router.post("/accept/sickpass",(req,res)=>{
     const filter = {
@@ -176,6 +214,70 @@ router.post("/get/otherpass",(req,res)=>{
     })
 });
 
+router.post("/accept/otherpass",(req,res)=>{
+    const id = req.body.id;
+    Faculty.findOne({email:req.body.email},(err,faculty)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(faculty){
+                Student.findOne({student_rollno:req.body.student_rollno},(err,student)=>{
+                    if(err){
+                        res.status(200).json({error:true});
+                    }
+                    else{
+                        Other.findOne({_id:id},(err,result)=>{
+                            if(err){
+                                res.status(200).json({error:true});
+                            }
+                            else
+                            {
+                                result.Faculty.permitted = true;
+                                result.Faculty.status = "accepted";
+                                
+                                student.other_passess+=1;
+
+                                faculty.other_passess+=1;
+
+                                result.save();
+                                student.save();
+                                faculty.save();
+                                res.status(200).json({updated:true});
+                            }
+                        })
+                    }
+                })
+            }
+            else{
+                res.status(200).json({faculty_found:false});
+            }
+        }
+    })
+});
+
+router.post("/reject/otherpass",(req,res)=>{
+    const id = req.body.id;
+    Other.findOne({_id:id},(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(result){
+
+                result.Faculty.permitted = false;
+                result.status = "rejected";
+                result.save();
+                res.status(200).json({rejected:true});
+            }
+            else{
+                res.status(200).json({passfound:false});
+            }
+        }
+    });
+});
+
+
 router.post("/Login",(req,res)=>{
     Faculty.findOne({email:req.body.email},(err,result)=>{
         if(err){
@@ -200,8 +302,6 @@ router.post("/Login",(req,res)=>{
     })
 });
 
-
-
 router.post("/Register",(req,res)=>{
     Faculty.findOne({email:req.body.email},(err,result)=>{
         if(err){
@@ -222,8 +322,9 @@ router.post("/Register",(req,res)=>{
                     gender:req.body.gender,
                     event_passess:0,
                     gate_passesss:0,
-                    council_passess:0,
-                    sick_passeds:0
+                    leave_passess:0,
+                    sick_passeds:0,
+                    other_passess:0,
                 });
                 faculty_name = req.body.name;
                 faculty_email = req.body.email;
@@ -443,19 +544,56 @@ router.post("/history/leavepass",(req,res)=>{
             res.status(200).json(result);
         }
     })
+});
+
+router.post("/history/otherpass",(req,res)=>{
+    const filter = {
+        'Faculty.email':req.body.faculty_email,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false},
+        ],
+        $or:[
+            {status:'accepted'},
+            {status:'rejected'}
+        ]
+    }
+    Other.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
 })
 
 
 router.post("/forward/hod/gate",(req,res)=>{
-    const filter = {
-        _id:id,
-        'Faculty.email':req.body.faculty,
-        'Incharge.permitted':null,
-        'Faculty.permitted':null,
-        marked_for_review:null,
-        status:'pending',
-        department:req.body.department,
-        year:req.body.year,
+    var filter = {};
+    const id = req.body.id;
+    if(req.body.year===1){
+        filter = {
+            _id:id,
+            'Faculty.email':req.body.faculty,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:req.body.year
+        }
+    }
+    else{
+        filter = {
+            _id:id,
+            'Faculty.email':req.body.faculty,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            department:req.body.department,
+            year:{$gte:2}
+        }
     }
     Gate.findOne(filter,(err,result)=>{
         if(err){
@@ -463,6 +601,7 @@ router.post("/forward/hod/gate",(req,res)=>{
         }
         else{
             if(result){
+                result.sent_by = result.Faculty.name;
                 result.marked_for_review = true;
                 result.save();
                 res.status(200).json({marked:true});
@@ -474,6 +613,49 @@ router.post("/forward/hod/gate",(req,res)=>{
     })
 });
 
+router.post("/forward/hod/otherpass",(req,res)=>{
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            _id:req.body.id,
+            'Faculty.email':req.body.faculty,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            year:req.body.year, 
+        }
+    }
+    else{
+        filter = {
+            _id:req.body.id,
+            'Faculty.email':req.body.faculty,
+            'Incharge.permitted':null,
+            'Faculty.permitted':null,
+            marked_for_review:null,
+            status:'pending',
+            department:req.body.department,
+            year:{$gte:2},
+        }
+    }
+    Other.findOne(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(result){
+                result.marked_for_review = true;
+                result.sent_by = result.Faculty.name;
+                result.save();
+            }
+            else
+            {
+                res.status(200).json({found:false});
+            }
+        }
+    })
+     
+})
 
 
 router.get("/statistics",(req,res)=>{

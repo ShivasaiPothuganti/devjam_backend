@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import express from "express";
-import Student from "./model.js";
+import Student, { Other } from "./model.js";
 import { Faculty,Incharge,Hod,Gate,Event } from "./model.js";
 
 const router = express.Router();
@@ -107,7 +107,26 @@ router.post("/approve/faculty",(req,res)=>{
     })
 })
 
-router.post("/gatepass",(req,res)=>{
+router.post("/approve/gatepass",(req,res)=>{
+    var filter = {}
+    if(req.body.year===1){
+        filter = {
+            _id:id,
+            marked_for_review:true,
+            accepted_by_hod:null,
+            year:1
+        }
+    }
+    else{
+        filter = {
+            _id:id,
+            marked_for_review:true,
+            year:{$gte:2},
+            department:req.body.department,
+            accepted_by_hod:null
+        }
+    }
+
     Hod.findOne(
         {
         email:req.body.hod_email,
@@ -129,6 +148,8 @@ router.post("/gatepass",(req,res)=>{
                     filter = {
                         _id:req.body.id,
                         marked_for_review:true,
+                        accepted_by_hod:null,
+                        status:"pending",
                         year:1
                     }
                 }
@@ -136,6 +157,8 @@ router.post("/gatepass",(req,res)=>{
                     filter = {
                         _id:req.body.id,
                         marked_for_review:true,
+                        accepted_by_hod:null,
+                        status:"pending",
                         department:req.body.department,
                         year:{$gte:2}
                     }
@@ -182,6 +205,87 @@ router.post("/gatepass",(req,res)=>{
         }
     });
 });
+
+router.post("/approve/otherpass",(req,res)=>{
+    const id = req.body.id;
+    const permitted = req.body.permission;
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            _id:id,
+            marked_for_review:true,
+            accepted_by_hod:null,
+            year:1
+        }
+    }
+    else
+    {
+        filter = {
+            _id:id,
+            marked_for_review:true,
+            accepted_by_hod:null,
+            year:{$gte:2},
+            department:req.body.department
+        }
+    }
+    Hod.findOne({email:req.body.email},(err,hod)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(hod){
+                Student.findOne({rollno:req.body.rollno},(err,student)=>{
+                    if(err){
+                        res.status(200).json({error:true});
+                    }
+                    else{
+                        if(student){
+                            Other.findOne(filter,(err,result)=>{
+                                if(err){
+                                    res.status(200).json({error:true});
+                                }
+                                else{
+                                    if(result){
+                                        if(permitted){
+                                            result.accepted_by_hod = true;
+                                            result.status = "accepted";
+                                            result.save();
+
+                                            hod.other_passess+=1;
+                                            hod.save();
+
+                                            student.other_passess+=1;
+
+                                            student.save();
+                                            res.status(200).json({permitted:true});
+
+                                        }
+                                        else{
+                                            result.accepted_by_hod = false;
+                                            result.status = "pending";
+                                            result.save();
+                                            res.status(200).json({permitted:false});
+                                        }
+                                    }
+                                    else
+                                    {
+                                        res.status(200).json({found:false});
+                                    }
+                                }
+                            })
+                        }
+                        else{
+                            res.status(200).json({found:false});
+                        }
+                    }
+                })
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+})
 
 router.get("/",(req,res)=>{
     var filter = {};
@@ -247,9 +351,11 @@ router.post("/Register",(req,res)=>{
                     year:req.body.year,
                     event_passess:0,
                     gate_passesss:0,
-                    council_passess:0,
-                    sick_passeds:0
+                    leave_passess:0,
+                    sick_passeds:0,
+                    other_passess:0
                 });
+                0
                 new_faculty.save();
                 res.status(200).json({registerhod:true});
             }
@@ -277,7 +383,84 @@ router.get("/statistics",(req,res)=>{
             res.status(200).json(result);
         }
     })
-})
+});
 
+router.post("/history/gatepass",(req,res)=>{
+    var filter ={};
+    if(req.body.year===1){
+        filter = {
+           year:1,
+           $or:[
+               {accepted_by_hod:false},
+               {accepted_by_hod:true}
+           ],
+           $or:[
+               {status:"accepted"},
+               {status:"rejected"}
+           ]
+        }
+    }
+    else{
+        filter = {
+            year:{$gte:2},
+            $or:[
+                {accepted_by_hod:false},
+                {accepted_by_hod:true}
+            ],
+            $or:[
+                {status:"accepted"},
+                {status:"rejected"}
+            ],
+            department:req.body.department
+        }
+    }
+    Gate.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
+
+router.post("/history/otherpass",(req,res)=>{
+    var filter ={};
+    if(req.body.year===1){
+        filter = {
+           year:1,
+           $or:[
+               {accepted_by_hod:false},
+               {accepted_by_hod:true}
+           ],
+           $or:[
+               {status:"accepted"},
+               {status:"rejected"}
+           ]
+        }
+    }
+    else{
+        filter = {
+            year:{$gte:2},
+            $or:[
+                {accepted_by_hod:false},
+                {accepted_by_hod:true}
+            ],
+            $or:[
+                {status:"accepted"},
+                {status:"rejected"}
+            ],
+            department:req.body.department,
+        }
+    }
+    Other.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+});
 
 export default router;

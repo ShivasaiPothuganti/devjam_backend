@@ -18,7 +18,7 @@ import incharge from "./Incharge.js";
 */
 
 /*Model imports*/
-import Student, { Other } from "./model.js";
+import Student, { Leave, Other } from "./model.js";
 import { Faculty,Hod,Incharge,Gate,Event,Sick } from "./model.js";
 
 /*app config */
@@ -99,7 +99,7 @@ app.post("/studentRegister",(req,res)=>{
                     year:req.body.year,
                     event_passess:0,
                     gate_passesss:0,
-                    council_passess:0,
+                    leave_passess:0,
                     sick_passes:0
                 });
                 student_save_data.save();
@@ -131,6 +131,7 @@ app.post("/GatePass",(req,res)=>{
         year:student_year,
         accepted_by_hod:null,
         marked_for_review:null,
+        sent_by:null,
         status:"pending",
     });
     new_gatepass.save();
@@ -158,11 +159,11 @@ app.post("/eventPass",(req,res)=>{
         marked_for_review:null,
         start_date:req.body.start_date,
         end_date:req.body.end_date,
+        sent_by:null,
     });
     console.log(new_pass);
     new_pass.save();
 });
-
 
 app.post("/sickpass",(req,res)=>{
     const sick_pass = new Sick({
@@ -177,7 +178,8 @@ app.post("/sickpass",(req,res)=>{
         },
         year:req.body.year,
         department:req.body.department,
-        status:"pending"
+        status:"pending",
+        sent_by:null
     });
     sick_pass.save();
     res.status(200).json({saved:true});
@@ -204,10 +206,42 @@ app.post("/otherpass",(req,res)=>{
         marked_for_review:null,
         department:req.body.department,
         status:"pending",
+        sent_by:null
     });
     otherpass.save();
     res.status(200).json({saved:true});
-})
+});
+
+app.post("/leave",(req,res)=>{
+    const new_leave = new Leave({
+        student_roll:req.body.rollno,
+        subject:req.body.subject,
+        body:req.body.letter_body,
+        gen_date:new Date().toDateString(),
+        start_date:req.body.start_date(),
+        end_date:req.body.end_date(),
+        Faculty:{
+            name:req.body.faculty_name,
+            email:req.body.faculty_email,
+            permitted:null
+        },
+        Incharge:{
+            name:req.body.incharge_name,
+            email:req.body.incharge_email,
+            permitted:null
+        },
+        accepted_by_hod:null,
+        year:req.body.year,
+        marked_for_review:null,
+        department:req.body.department,
+        status:"pending",
+        sent_by:null
+    });
+    new_leave.save();
+    res.status(200).json({added:true});
+});
+
+
 
 app.get("/",(req,res)=>{
     res.send("<h1>I am up and running</h1>");
