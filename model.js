@@ -50,7 +50,7 @@ const hod = mongoose.Schema({
     department:String,
     event_passes:Number,
     gate_passesss:Number,
-    Leave_passess:Number,
+    leave_passess:Number,
     sick_passes:Number,
     other_passess:Number,
     year:Number

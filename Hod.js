@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import express from "express";
-import Student, { Other } from "./model.js";
+import Student, { Leave, Other } from "./model.js";
 import { Faculty,Incharge,Hod,Gate,Event } from "./model.js";
 
 const router = express.Router();
@@ -64,6 +64,34 @@ router.post("/eventpass",(req,res)=>{
         }
     })
 });
+
+router.post("/otherpass",(req,res)=>{
+    var filter = {};
+    if(req.body.hod_year>1){
+        filter = {
+            accepted_by_hod:null,
+            marked_for_review:true,
+            year:{$gte:2},
+            department:hod_department
+        }
+    }
+    else{
+        filter = {
+            accepted_by_hod:null,
+            marked_for_review:true,
+            year:1,
+            department:hod_department
+        }  
+    }
+    Other.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{   
+            res.status(200).json(result);
+        }
+    });
+})
 
 router.post("/getfaculty",(req,res)=>{
     var filter ={};
@@ -285,7 +313,90 @@ router.post("/approve/otherpass",(req,res)=>{
             }
         }
     })
-})
+});
+
+
+router.post("/approve/leavepass",(req,res)=>{
+    const id = req.body.id;
+    const permitted = req.body.permission;
+    var filter = {};
+    if(req.body.year===1){
+        filter = {
+            _id:id,
+            marked_for_review:true,
+            accepted_by_hod:null,
+            year:1
+        }
+    }
+    else
+    {
+        filter = {
+            _id:id,
+            marked_for_review:true,
+            accepted_by_hod:null,
+            year:{$gte:2},
+            department:req.body.department
+        }
+    }
+    Hod.findOne({department:req.body.department,email:req.body.email},(err,hod)=>{
+        if(err){
+            res.status(400).json(({error:true}));
+        }
+        else{
+            if(hod){
+                Student.findOne({rollno:req.body.rollno},(err,student)=>{
+                    if(err){
+                        res.status(400).json({error:true});
+                    }
+                    else{
+                        if(student){
+                            Leave.findOne(filter,(err,leave)=>{
+                                if(err){
+                                    res.status(200).json({error:true});
+                                }
+                                else{
+                                    if(leave){
+                                        if(permitted){
+                                            leave.accepted_by_hod = true;
+                                            leave.status = "accepted";
+
+                                            hod.leave_passess+=1;
+
+                                            student.leave_passess+=1;
+
+                                            hod.save();
+                                            student.save();
+                                            leave.save();
+                                            res.status(200).json({permitted:true});
+                                        }
+                                        else{
+                                            leave.accepted_by_hod =false;
+                                            leave.status = "rejected";
+                                            leave.save();
+                                            res.status(200).json({permitted:false});
+                                        }
+                                    }
+                                    else{
+                                        res.status(200).json({found:false});
+                                    }
+                                }
+                            })
+                        }
+                        else
+                        {
+                            res.status(200).json({found:false});
+                        }
+                    }
+                })
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+});
+
+
 
 router.get("/",(req,res)=>{
     var filter = {};
@@ -462,5 +573,44 @@ router.post("/history/otherpass",(req,res)=>{
         }
     })
 });
+
+router.post("/history/leavepass",(req,res)=>{
+    var filter ={};
+    if(req.body.year===1){
+        filter = {
+           year:1,
+           $or:[
+               {accepted_by_hod:false},
+               {accepted_by_hod:true}
+           ],
+           $or:[
+               {status:"accepted"},
+               {status:"rejected"}
+           ]
+        }
+    }
+    else{
+        filter = {
+            year:{$gte:2},
+            $or:[
+                {accepted_by_hod:false},
+                {accepted_by_hod:true}
+            ],
+            $or:[
+                {status:"accepted"},
+                {status:"rejected"}
+            ],
+            department:req.body.department,
+        }
+    }
+    Leave.find(filter,(err,result)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
 
 export default router;

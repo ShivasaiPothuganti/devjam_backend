@@ -131,8 +131,59 @@ router.post("/get/leave",(req,res)=>{
         else{
             res.status(200).json(result);
         }
+    });
+});
+
+router.post("/approve/leave",(req,res)=>{
+    const id = req.body.id;
+    const permitted = req.body.permission;
+
+    Faculty.findOne({email:req.body.email},(err,faculty)=>{
+        if(err){
+            res.status(200).json({error:true});
+        }
+        else{
+            if(faculty){
+                Student.findOne({rollno:req.body.rollno},(err,student)=>{
+                    if(err){res.status(200).json({error:true});}
+                    else{
+                        if(student){
+                            Leave.findOne({_id:id},(err,result)=>{
+                                if(permitted){
+                                    result.Faculty.permitted = true;
+                                    result.status = "accepted";
+                                    
+                                    student.leave_passess+=1;
+
+                                    faculty.leave_passess+=1;
+
+                                    student.save();
+                                    result.save();
+                                    faculty.save();
+                                    res.status(200).json({permitted:true});
+                                }
+                                else{
+                                    result.Faculty.permitted = false;
+                                    result.status = "rejected";
+                                    result.save();
+                                    res.status(200).json({permitted:false});
+                                }
+                            })
+                        }
+                        else{
+                            res.status(200).json({found:false});
+                        }
+                    }
+                })
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }   
     })
-})
+
+});
+
 
 router.post("/accept/sickpass",(req,res)=>{
     const filter = {
@@ -277,6 +328,46 @@ router.post("/reject/otherpass",(req,res)=>{
     });
 });
 
+router.post("/forward/hod/leave",(req,res)=>{
+    const id = req.body.id;
+    Leave.findOne({_id:id},(err,leave)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            if(leave){
+                leave.marked_for_review = true;
+                leave.sent_by =req.body.facult_name;
+                leave.save();
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+});
+
+router.post("/history/leavepass",(req,res)=>{
+    const filter = {
+        'Faculty.email': req.body.name,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false}, 
+        ],
+        $or:[
+            {status:"accepted"},
+            {status:"rejected"}
+        ]
+    }
+    Leave.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    })
+})
 
 router.post("/Login",(req,res)=>{
     Faculty.findOne({email:req.body.email},(err,result)=>{
@@ -513,6 +604,10 @@ router.post("/history/gatepass",(req,res)=>{
 router.post("/history/eventpass",(req,res)=>{
     const filter = {
         'Faculty.email':req.body.faculty_email,
+        $or:[
+            {'Faculty.permitted':true},
+            {'Faculty.permitted':false}
+        ],
         $or:[
             {status:'accepted'},
             {status:'rejected'}

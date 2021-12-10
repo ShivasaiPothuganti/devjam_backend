@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import express from "express";
-import Student, { Other } from "./model.js";
+import Student, { Leave, Other } from "./model.js";
 import {Faculty,Incharge,Hod,Gate,Event} from "./model.js";
 
 /*
@@ -465,10 +465,10 @@ router.post("/history/otherpass",(req,res)=>{
 
 router.post("/history/gatepass",(req,res)=>{
     const filter = {
-        'Faculty.emai': req.body.name,
+        'Incharge.email': req.body.name,
         $or:[
-            {'Faculty.permitted':true},
-            {'Faculty.permitted':false}, 
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false}, 
         ],
         $or:[
             {status:"accepted"},
@@ -484,6 +484,108 @@ router.post("/history/gatepass",(req,res)=>{
         }
     });
 });
+
+router.post("/approve/leavepass",(req,res)=>{
+    const id = req.body.id;
+    const permitted = req.body.permission;
+    Incharge({email:req.body.email},(err,incharge)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            if(incharge){
+                Student.findOne({rollno:req.body.student},(err,student)=>{
+                    if(err){
+                        res.status(400).json({error:true});
+                    }
+                    else{
+                        if(student){
+                            Leave({_id:id},(err,result)=>{
+                                if(err){
+                                    res.status(200).json({error:true});
+                                }
+                                else{
+                                    if(result){
+                                        if(permitted){
+                                            result.Incharge.permitted = true;
+                                            result.status = "accepted";
+
+                                            student.leave_passess+=1;
+
+                                            incharge.leave_passess+=1;
+
+                                            result.save();
+                                            student.save();
+                                            incharge.save();
+                                            res.status(200).json({permitted:true});
+                                        }
+                                        else{
+                                            result.Incharge.permitted = false;
+                                            result.status = "rejected";
+
+                                            result.save();
+                                            res.status(200).json({permitted:false});
+                                        }
+                                    }
+                                    else{
+                                        res.status(200).json({found:true});
+                                    }
+                                }
+                            })
+                        }
+                        else{
+                            res.status(200).json({found:false});
+                        }
+                    }
+                })
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+});
+
+router.post("/forward/hod/leave",(req,res)=>{
+    const id = req.body.id;
+    Leave.findOne({_id:id},(err,leave)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            if(leave){
+                leave.marked_for_review = true;
+                leave.sent_by =req.body.inacharge_name;
+                leave.save();
+            }
+            else{
+                res.status(200).json({found:false});
+            }
+        }
+    })
+});
+
+router.post("/history/leave",(req,res)=>{
+    const filter = {
+        'Incharge.email': req.body.name,
+        $or:[
+            {'Incharge.permitted':true},
+            {'Incharge.permitted':false}, 
+        ],
+        $or:[
+            {status:"accepted"},
+            {status:"rejected"}
+        ]
+    }
+    Leave.find(filter,(err,result)=>{
+        if(err){
+            res.status(400).json({error:true});
+        }
+        else{
+            res.status(200).json(result);
+        }
+    });   
+})
 
 router.post("/remove",(req,res)=>{
     Incharge.deleteOne({email:req.body.email},(err)=>{
