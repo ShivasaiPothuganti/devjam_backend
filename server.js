@@ -117,7 +117,7 @@ app.post("/GatePass",(req,res)=>{
             email:req.body.incharge_email,
             permitted:null
         },
-        year:student_year,
+        year:req.body.year,
         accepted_by_hod:null,
         marked_for_review:null,
         sent_by:null,
