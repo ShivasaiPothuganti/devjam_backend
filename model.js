@@ -145,7 +145,7 @@ const Leave = new mongoose.model('leave',new mongoose.Schema({
     marked_for_review:Boolean,
     department:String,
     status:String,
-    sent_by:String
+    sent_by:String  
 }));
 const Other = new mongoose.model('other',new mongoose.Schema({
     student_rollno:String,

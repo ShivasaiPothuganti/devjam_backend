@@ -6,17 +6,6 @@ import hod from "./Hod.js";
 import faculty from "./Faculty.js";
 import incharge from "./Incharge.js";
 
-/*
-    {
-        "incharge":"deepthi",
-        "reason":"neek enduku",
-        "facultyname":"ravikumar",
-        "facultyMail":"ravikumar@gmail.com",
-        "inchargeName":"deepthi",
-        "inchargeEmail":"deepthi@gmail.com"
-    } 
-*/
-
 /*Model imports*/
 import Student, { Leave, Other } from "./model.js";
 import { Faculty,Hod,Incharge,Gate,Event,Sick } from "./model.js";
@@ -115,17 +104,17 @@ app.post("/studentRegister",(req,res)=>{
 
 app.post("/GatePass",(req,res)=>{
     const new_gatepass = Gate({
-        student_rollno:student_rollno,
+        student_rollno:req.body.rollno,
         reason:req.body.reason,
         gen_date:new Date().toDateString(),
         Faculty:{
-            name:req.body.facultyname,
-            email:req.body.facultyMail,
+            name:req.body.faculty_name,
+            email:req.body.faculty_mail,
             permitted:null
         },
         Incharge:{
-            name:req.body.inchargeName,
-            email:req.body.inchargeEmail,
+            name:req.body.incharge_name,
+            email:req.body.incharge_email,
             permitted:null
         },
         year:student_year,
@@ -133,6 +122,7 @@ app.post("/GatePass",(req,res)=>{
         marked_for_review:null,
         sent_by:null,
         status:"pending",
+        department:req.body.department
     });
     new_gatepass.save();
     res.status(200).json({added:true});
@@ -409,11 +399,9 @@ app.post("/history/sickpass",(req,res)=>{
     })
 });
 
-
 app.get("/",(req,res)=>{
     res.send("<h1>I am up and running</h1>");
 });
-
 
 app.listen(port,(err)=>{
     if(err){
@@ -424,5 +412,3 @@ app.listen(port,(err)=>{
         console.log("server is up and running on port "+port);
     }
 });
-
-/*gatepass */

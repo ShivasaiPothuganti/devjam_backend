@@ -3,23 +3,6 @@ import express from "express";
 import Student, { Leave, Other } from "./model.js";
 import {Faculty,Incharge,Hod,Gate,Event} from "./model.js";
 
-/*
-    {
-        "name":"deepthi",
-        "email":"deepthi@gmail.com",
-        "password":"deepthi",
-        "department":"cse"
-    }
-*/
-
-var incharge ={
-    email:"",
-    name:"",
-    year:"",
-    department:""
-}
-
-
 const router  = express.Router();
 router.post("/Login",(req,res)=>{
     Incharge.findOne({email:req.body.email},(err,result)=>{
